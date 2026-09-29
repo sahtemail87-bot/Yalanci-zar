@@ -230,7 +230,7 @@
         <!-- Player Name -->
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">Oyuncu Adınız</label>
-          <input type="text" id="playerNameInput" value="Oyuncu 1" maxlength="12" class="w-full bg-casino-900/80 border border-emerald-700/50 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-emerald-400 transition-colors">
+          <input type="text" id="playerNameInput" value="Oyuncu 1" maxlength="12" class="select-text w-full bg-casino-900/80 border border-emerald-700/50 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-emerald-400 transition-colors">
         </div>
 
         <!-- Bot Count (For Bot Mode) -->
@@ -267,9 +267,24 @@
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">Oda Kodu (katılmak için)</label>
-            <input type="text" id="roomCodeInput" placeholder="Örn: K7M2P" maxlength="5" class="w-full uppercase bg-casino-900/80 border border-emerald-700/50 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-teal-400 tracking-widest font-mono">
+            <input type="text" id="roomCodeInput" placeholder="Örn: K7M2P" maxlength="5" class="select-text w-full uppercase bg-casino-900/80 border border-emerald-700/50 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-teal-400 tracking-widest font-mono">
             <button type="button" onclick="game.joinRoom()" class="mt-3 w-full py-3 rounded-xl bg-teal-600 hover:bg-teal-500 font-bold text-slate-950 transition-colors"><i class="fa-solid fa-right-to-bracket mr-1"></i> Odaya Katıl</button>
           </div>
+        </div>
+
+        <!-- Turn Duration -->
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2"><i class="fa-solid fa-stopwatch mr-1 text-amber-400"></i> Hamle Süresi</label>
+          <select id="turnDurationSelect" class="w-full bg-casino-900/80 border border-emerald-700/50 rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-emerald-400">
+            <option value="0">Süresiz (∞)</option>
+            <option value="15">15 saniye (Hızlı)</option>
+            <option value="20">20 saniye</option>
+            <option value="25" selected>25 saniye (Varsayılan)</option>
+            <option value="30">30 saniye</option>
+            <option value="45">45 saniye</option>
+            <option value="60">60 saniye (Rahat)</option>
+          </select>
+          <p id="onlineDurationHint" class="hidden text-[11px] text-slate-400 mt-1">Çevrimiçi odada süreyi odayı kuran seçer, herkes için geçerli olur.</p>
         </div>
 
         <!-- Game Rule Options -->
@@ -298,8 +313,13 @@
     <div id="onlineLobbyView" class="hidden w-full max-w-xl mx-auto glass-card rounded-2xl p-6 sm:p-8 border border-teal-500/30 shadow-2xl space-y-5 text-center">
       <div>
         <div class="text-xs uppercase tracking-widest text-slate-400">Oda Kodu</div>
-        <div id="lobbyCode" class="font-mono font-black text-4xl tracking-[0.3em] text-amber-400 gold-glow"></div>
+        <div id="lobbyCode" class="select-text cursor-text font-mono font-black text-4xl tracking-[0.3em] text-amber-400 gold-glow"></div>
         <div class="text-xs text-slate-400 mt-1">Arkadaşların bu kodla katılsın</div>
+        <div class="grid grid-cols-2 gap-2 mt-4">
+          <button type="button" id="copyCodeBtn" onclick="game.copyRoomCode('code')" class="py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-sm font-bold transition-colors"><i class="fa-regular fa-copy mr-1"></i> Kodu Kopyala</button>
+          <button type="button" id="copyLinkBtn" onclick="game.copyRoomCode('link')" class="py-2.5 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 text-teal-300 text-sm font-bold transition-colors"><i class="fa-solid fa-link mr-1"></i> Davet Linki</button>
+        </div>
+        <div id="lobbyDuration" class="text-xs text-slate-400 mt-3"></div>
       </div>
       <div id="lobbyPlayers" class="space-y-2 text-left"></div>
       <div id="lobbyMsg" class="text-xs text-teal-300"></div>
@@ -323,7 +343,7 @@
 
         <!-- Current Highest Bid Indicator -->
         <div class="flex items-center gap-2 bg-casino-900/80 px-4 py-1.5 rounded-xl border border-amber-500/30">
-          <span class="text-xs text-slate-400 uppercase font-semibold">Son Teklif:</span>
+          <span class="text-xs text-slate-400 uppercase font-semibold">En Yüksek Teklif:</span>
           <div id="currentBidDisplay" class="font-display font-extrabold text-amber-400 text-sm sm:text-base flex items-center gap-1.5">
             <span>Henüz Yok</span>
           </div>
@@ -332,7 +352,7 @@
         <!-- Timer -->
         <div id="turnTimerContainer" class="flex items-center gap-2 text-xs font-bold text-slate-300">
           <i class="fa-regular fa-clock text-emerald-400"></i>
-          <span id="turnTimerText" class="text-emerald-400 text-sm font-mono">20s</span>
+          <span id="turnTimerText" class="text-emerald-400 text-sm font-mono">25s</span>
         </div>
       </div>
 
@@ -352,6 +372,14 @@
         <!-- OPPONENENTS ROW (Top Players) -->
         <div id="opponentsRow" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 z-10">
           <!-- Bot / Opponent cards generated via JS -->
+        </div>
+
+        <!-- HIGHEST BID PANEL (zar görseli) -->
+        <div class="z-10 mt-3 rounded-2xl border-2 border-amber-500/50 bg-casino-900/85 px-4 py-3 text-center shadow-lg shadow-amber-500/10">
+          <div class="text-[11px] font-extrabold uppercase tracking-[0.2em] text-amber-400 mb-2"><i class="fa-solid fa-crown mr-1"></i> En Yüksek Teklif</div>
+          <div id="highestBidPanel" class="flex flex-col items-center gap-2 min-h-[3.5rem] justify-center">
+            <span class="text-xs text-slate-400">Henüz teklif yok</span>
+          </div>
         </div>
 
         <!-- CENTER TABLE LOG & REACTION BUBBLES -->
@@ -624,7 +652,8 @@
         this.exactCallAllowed = true;
         this.selectedFace = 2;
         this.timer = null;
-        this.timeLeft = 20;
+        this.turnDuration = 25;
+        this.timeLeft = 25;
         this.isProcessing = false;
         this.isGuest = false; this.mySeat = 0; this.busy = false; this.logs = []; this.net = null; this.code = ""; this.started = false; this.over = null;
 
@@ -657,6 +686,7 @@
         document.getElementById('botConfigGroup').classList.toggle('hidden', mode !== 'bot');
         document.getElementById('localConfigGroup').classList.toggle('hidden', mode !== 'local');
         document.getElementById('onlineConfigGroup').classList.toggle('hidden', mode !== 'online');
+        document.getElementById('onlineDurationHint').classList.toggle('hidden', mode !== 'online');
 
         const titleMap = {
           'bot': 'Tek Oyunculu Ayarları',
@@ -703,6 +733,8 @@
         this.wildOnes = document.getElementById('wildOnesRule').checked;
         this.exactCallAllowed = document.getElementById('exactCallRule').checked;
         this.difficulty = document.getElementById('botDifficultySelect').value;
+        const dur = parseInt(document.getElementById('turnDurationSelect').value, 10);
+        this.turnDuration = [0, 15, 20, 25, 30, 45, 60].includes(dur) ? dur : 25;
         this.busy = false; this.over = null; this.mySeat = 0;
         if (this.mode === 'online') return this.hostRoom(playerName);
 
@@ -736,7 +768,7 @@
         this.busy = false;
         this.audio.playDiceShake();
         this.currentBid = null;
-        document.getElementById('currentBidDisplay').innerHTML = '<span class="text-slate-400 text-xs">Henüz Yok</span>';
+        this.renderBid();
         document.getElementById('roundCounterText').innerText = this.round;
 
         // Roll hidden dice for active players
@@ -863,6 +895,8 @@
         // Local multiplayer cover screen check
         if (this.mode === 'local') {
           document.getElementById('nextPlayerPassName').innerText = `Sıra: ${currentPlayer.name}`;
+          clearInterval(this.timer);
+          document.getElementById('turnTimerText').innerText = this.turnDuration ? `${this.turnDuration}s` : '∞';
           document.getElementById('passCoverScreen').classList.remove('hidden');
           return;
         }
@@ -881,6 +915,7 @@
 
       revealLocalTurn() {
         document.getElementById('passCoverScreen').classList.add('hidden');
+        this.resetTimer();
         const currentPlayer = this.players[this.turnIndex];
         document.getElementById('humanPlayerName').innerText = currentPlayer.name;
         document.getElementById('humanDiceCountSub').innerText = `${currentPlayer.hand.length} Zar Kaldı`;
@@ -907,8 +942,13 @@
 
       resetTimer() {
         clearInterval(this.timer);
-        this.timeLeft = 25;
         const timerText = document.getElementById('turnTimerText');
+        if (!this.turnDuration) {
+          this.timeLeft = 0;
+          timerText.innerText = '∞';
+          return;
+        }
+        this.timeLeft = this.turnDuration;
         timerText.innerText = `${this.timeLeft}s`;
 
         this.timer = setInterval(() => {
@@ -997,11 +1037,7 @@
         this.audio.playClick();
 
         // Update UI Display
-        document.getElementById('currentBidDisplay').innerHTML = `
-          <span class="text-amber-300">${count} adet</span>
-          <span class="bg-amber-400 text-slate-950 px-2 py-0.5 rounded-md font-bold text-xs">${face}'li</span>
-          <span class="text-[10px] text-slate-400 font-normal">(${player.name})</span>
-        `;
+        this.renderBid();
 
         this.logMessage(`<b>${player.name}</b> teklif verdi: <span class="text-amber-400 font-bold">${count} Adet ${face}'li</span>`);
 
@@ -1180,6 +1216,38 @@
       cleanName() { return document.getElementById('playerNameInput').value.replace(/[<>&"'`]/g, '').trim().slice(0, 12) || 'Oyuncu'; }
       send(m) { this.R('actions').push(Object.assign({}, m, { from: CID })); }
 
+      async copyRoomCode(kind) {
+        this.audio.playClick();
+        if (!this.code) return;
+        const text = kind === 'link'
+          ? `${location.origin}${location.pathname}?oda=${this.code}`
+          : this.code;
+        let ok = false;
+        try { await navigator.clipboard.writeText(text); ok = true; }
+        catch (e) {
+          try {
+            const t = document.createElement('textarea');
+            t.value = text; t.style.position = 'fixed'; t.style.opacity = '0';
+            document.body.appendChild(t); t.focus(); t.select();
+            ok = document.execCommand('copy'); t.remove();
+          } catch (e2) {}
+        }
+        const btn = document.getElementById(kind === 'link' ? 'copyLinkBtn' : 'copyCodeBtn');
+        const old = btn.dataset.label || btn.innerHTML;
+        btn.dataset.label = old;
+        btn.innerHTML = ok ? '<i class="fa-solid fa-check mr-1"></i> Kopyalandı!' : 'Kopyalanamadı, kodu elle seç';
+        clearTimeout(btn._t);
+        btn._t = setTimeout(() => { btn.innerHTML = old; }, 1600);
+      }
+
+      openInviteFromUrl() {
+        let c = '';
+        try { c = (new URLSearchParams(location.search).get('oda') || '').toUpperCase().trim(); } catch (e) {}
+        if (!/^[A-Z0-9]{5}$/.test(c)) return;
+        this.selectMode('online');
+        document.getElementById('roomCodeInput').value = c;
+      }
+
       leaveOnline() {
         clearInterval(this.cd); this.cd = null;
         if (this.DB && this.code) {
@@ -1210,6 +1278,7 @@
         this.audio.playClick();
         const code = document.getElementById('roomCodeInput').value.trim().toLocaleUpperCase('en-US').replace(/İ/g, 'I');
         if (!code) { alert('Oda kodunu yaz.'); return; }
+        if (!/^[A-Z0-9]{5}$/.test(code)) { alert('Oda kodu 5 karakter olmalı (harf/rakam).'); return; }
         if (!this.fb()) return;
         const name = this.cleanName();
         this.leaveOnline();
@@ -1237,6 +1306,8 @@
         document.getElementById('lobbyCode').innerText = this.code;
         document.getElementById('lobbyPlayers').innerHTML = names.map((n, i) =>
           `<div class="flex items-center gap-2 bg-casino-900/80 border border-emerald-900/60 rounded-xl px-4 py-2 text-sm"><span class="text-amber-400 font-bold">${i + 1}.</span> ${n}${i === 0 ? ' 👑' : ''}${i === this.mySeat ? ' <span class="text-emerald-400 text-xs">(sen)</span>' : ''}</div>`).join('');
+        const dur = this.isGuest ? (this.S ? this.S.dur : undefined) : this.turnDuration;
+        document.getElementById('lobbyDuration').innerHTML = (dur === undefined || dur === null) ? '' : `<i class="fa-solid fa-stopwatch text-amber-400 mr-1"></i> Hamle süresi: <b class="text-slate-200">${dur === 0 ? 'Süresiz ∞' : dur + ' sn'}</b>`;
         const btn = document.getElementById('lobbyStartBtn');
         btn.classList.toggle('hidden', this.isGuest); btn.disabled = names.length < 2; btn.classList.toggle('opacity-50', names.length < 2);
         document.getElementById('lobbyMsg').innerText = this.isGuest ? 'Kurucunun oyunu başlatması bekleniyor…' : (names.length < 2 ? 'En az 2 oyuncu gerekli…' : 'Hazırsanız başlatın!');
@@ -1281,7 +1352,7 @@
       sync() {
         if (this.mode !== 'online' || this.isGuest || !this.net) return;
         if (!this.started) {
-          this.R('state').set({ ph: 'lobby', ids: this.lobby.map(p => p.cid), names: this.lobby.map(p => p.name) });
+          this.R('state').set({ ph: 'lobby', ids: this.lobby.map(p => p.cid), names: this.lobby.map(p => p.name), dur: this.turnDuration });
           return;
         }
         const P = this.players;
@@ -1289,15 +1360,38 @@
         this.R('state').set({
           ph: 'play', ids: P.map(p => p.cid), names: P.map(p => p.name), cnt: P.map(p => p.hand ? p.hand.length : 0),
           turn: this.turnIndex, bid: this.currentBid, round: this.round, tl: this.busy ? null : this.timeLeft,
-          logs: this.logs, wild: this.wildOnes, exact: this.exactCallAllowed, over: this.over || null
+          logs: this.logs, wild: this.wildOnes, exact: this.exactCallAllowed, over: this.over || null, dur: this.turnDuration
         }).catch(e => { if (!this.errShown) { this.errShown = true; alert('Veritabanına yazılamadı (' + (e.code || e.message) + '). Firebase Rules ayarını kontrol et.'); } });
       }
 
-      showBid() {
+      showBid() { this.renderBid(); }
+
+      renderBid() {
         const b = this.currentBid;
-        document.getElementById('currentBidDisplay').innerHTML = b
-          ? `<span class="text-amber-300">${b.count} adet</span> <span class="bg-amber-400 text-slate-950 px-2 py-0.5 rounded-md font-bold text-xs">${b.face}'li</span> <span class="text-[10px] text-slate-400 font-normal">(${this.players[b.playerIndex].name})</span>`
-          : '<span class="text-slate-400 text-xs">Henüz Yok</span>';
+        const head = document.getElementById('currentBidDisplay');
+        const panel = document.getElementById('highestBidPanel');
+        if (!b) {
+          this._bidSig = null;
+          head.innerHTML = '<span class="text-slate-400 text-xs">Henüz Yok</span>';
+          panel.innerHTML = '<span class="text-xs text-slate-400">Henüz teklif yok</span>';
+          return;
+        }
+        const who = (this.players[b.playerIndex] && this.players[b.playerIndex].name) || '';
+        head.innerHTML = `<span class="text-amber-300">${b.count} adet</span> <span class="bg-amber-400 text-slate-950 px-2 py-0.5 rounded-md font-bold text-xs">${b.face}'li</span> <span class="text-[10px] text-slate-400 font-normal">(${who})</span>`;
+
+        const sig = b.count + '-' + b.face + '-' + b.playerIndex;
+        const animate = sig !== this._bidSig;
+        this._bidSig = sig;
+        const MAX = 10;
+        const shown = Math.min(b.count, MAX);
+        let dice = '';
+        for (let i = 0; i < shown; i++) {
+          dice += `<div class="dice-3d w-9 h-9 sm:w-11 sm:h-11 bg-gradient-to-br from-amber-100 to-amber-300 rounded-lg flex items-center justify-center border-2 border-amber-400 ${animate ? 'animate-dice-roll' : ''}">${this.getDiceIconHTML(b.face)}</div>`;
+        }
+        if (b.count > MAX) dice += `<div class="self-center text-amber-300 font-black text-sm">+${b.count - MAX}</div>`;
+        panel.innerHTML = `
+          <div class="flex flex-wrap items-center justify-center gap-1.5">${dice}</div>
+          <div class="text-sm font-bold text-amber-300">${b.count} adet ${b.face}'li <span class="text-[11px] text-slate-400 font-normal">· teklif veren: ${who}</span></div>`;
       }
 
       applyState() {
@@ -1319,7 +1413,7 @@
         box.scrollTop = box.scrollHeight;
         if (this.tS !== S) { this.tS = S; this.tdl = S.tl == null ? null : Date.now() + S.tl * 1000; }
         if (!this.cd) this.cd = setInterval(() => {
-          document.getElementById('turnTimerText').innerText = this.tdl == null ? '--' : Math.max(0, Math.ceil((this.tdl - Date.now()) / 1000)) + 's';
+          document.getElementById('turnTimerText').innerText = (this.S && this.S.dur === 0) ? '∞' : (this.tdl == null ? '--' : Math.max(0, Math.ceil((this.tdl - Date.now()) / 1000)) + 's');
         }, 500);
         const myTurn = S.turn === seat && S.tl != null && S.cnt[seat] > 0 && !S.over;
         if (myTurn) this.enableControls(); else this.disableControls();
@@ -1350,6 +1444,7 @@
     window.addEventListener('load', () => {
       game = new LiarsDiceGame();
       game.init();
+      game.openInviteFromUrl();
     });
   </script>
 </body>
