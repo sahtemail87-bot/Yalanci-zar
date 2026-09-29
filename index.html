@@ -3,55 +3,614 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yalancı Zarı</title>
+    <title>Yalancı Zarı (Liar's Dice) - Online</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="style.css">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .dice-shake { animation: shake 0.5s infinite; }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+    </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-slate-900">
 
-    <div class="max-w-md w-full bg-slate-800 rounded-xl shadow-2xl p-6 border border-slate-700 text-center">
-        <h1 class="text-3xl font-bold text-amber-500 mb-2">Yalancı Zarı</h1>
-        <p class="text-slate-400 text-sm mb-6">Blöf yap, zarını koru, rakiplerini ele!</p>
-
-        <!-- Lobi Arayüzü -->
-        <div id="lobby-screen" class="space-y-4">
-            <input type="text" id="player-name" placeholder="Oyuncu Adınız" class="w-full px-4 py-2 bg-slate-700 rounded border border-slate-600 focus:outline-none focus:border-amber-500">
-            <button id="btn-join" class="w-full bg-amber-600 hover:bg-amber-500 font-bold py-2 px-4 rounded transition">Oyuna Katıl</button>
+    <!-- Header -->
+    <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700/50 p-4 sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-dice-d6 text-3xl text-amber-500"></i>
+                <h1 class="text-xl md:text-2xl font-extrabold tracking-wider bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
+                    YALANCI ZARI
+                </h1>
+            </div>
+            <div id="room-info" class="hidden bg-slate-700/60 border border-slate-600 px-3 py-1.5 rounded-lg flex items-center space-x-2">
+                <span class="text-xs text-slate-400">Oda Kodu:</span>
+                <span id="display-room-code" class="font-mono font-bold text-amber-400 tracking-wider">------</span>
+                <button onclick="copyRoomCode()" class="text-slate-400 hover:text-white transition ml-1" title="Kodu Kopyala">
+                    <i class="fa-regular fa-copy"></i>
+                </button>
+            </div>
         </div>
+    </header>
 
-        <!-- Oyun Alanı -->
-        <div id="game-screen" class="hidden space-y-6">
-            <div id="status-msg" class="text-lg font-semibold text-amber-400">Oyuncular Bekleniyor...</div>
+    <!-- Main Content Area -->
+    <main class="max-w-4xl w-full mx-auto p-4 flex-grow flex flex-col justify-center">
+
+        <!-- LOBBY / LOGIN SCREEN -->
+        <div id="screen-lobby" class="bg-slate-800 border border-slate-700/80 rounded-2xl p-6 md:p-8 shadow-2xl max-w-md mx-auto w-full">
+            <h2 class="text-2xl font-bold mb-6 text-center text-slate-100">Oyuna Katıl</h2>
             
-            <div class="bg-slate-900 p-4 rounded-lg border border-slate-700">
-                <h2 class="text-sm text-slate-400 mb-2">Sizin Zarlarınız</h2>
-                <div id="my-dice" class="flex justify-center gap-2 text-2xl font-bold text-amber-400">
-                    - - - - -
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Oyuncu Adınız</label>
+                    <input type="text" id="input-player-name" placeholder="Örn: Zarbazana" maxlength="12"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition">
                 </div>
-            </div>
 
-            <!-- Hamle Alanı -->
-            <div id="action-area" class="space-y-3">
-                <div class="flex gap-2">
-                    <input type="number" id="bid-count" placeholder="Adet" min="1" class="w-1/2 px-3 py-2 bg-slate-700 rounded border border-slate-600">
-                    <select id="bid-value" class="w-1/2 px-3 py-2 bg-slate-700 rounded border border-slate-600">
-                        <option value="1">1'ler</option>
-                        <option value="2">2'ler</option>
-                        <option value="3">3'ler</option>
-                        <option value="4">4'ler</option>
-                        <option value="5">5'ler</option>
-                        <option value="6">6'lar</option>
-                    </select>
+                <div class="pt-2">
+                    <button onclick="createGame()" class="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-900 font-extrabold py-3 px-4 rounded-xl shadow-lg transition duration-200 transform active:scale-95 flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Yeni Oda Oluştur</span>
+                    </button>
                 </div>
-                <button id="btn-bid" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-2 rounded transition">Teklif Yap</button>
-                <button id="btn-liar" class="w-full bg-rose-600 hover:bg-rose-500 font-bold py-2 rounded transition">Yalancı! (Meydan Oku)</button>
+
+                <div class="relative flex py-2 items-center">
+                    <div class="flex-grow border-t border-slate-700"></div>
+                    <span class="flex-shrink mx-4 text-slate-500 text-xs uppercase">veya</span>
+                    <div class="flex-grow border-t border-slate-700"></div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Oda Kodu İle Katıl</label>
+                    <div class="flex space-x-2">
+                        <input type="text" id="input-room-code" placeholder="Oda Kodu" maxlength="6"
+                            class="uppercase font-mono tracking-widest w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition">
+                        <button onclick="joinGame()" class="bg-slate-700 hover:bg-slate-600 text-white font-bold px-5 py-3 rounded-xl transition duration-200 flex items-center justify-center">
+                            Katıl
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Firebase SDK & Oyun Mantığı -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-    <script src="app.js"></script>
+        <!-- WAITING ROOM SCREEN -->
+        <div id="screen-waiting" class="hidden bg-slate-800 border border-slate-700/80 rounded-2xl p-6 md:p-8 shadow-2xl max-w-lg mx-auto w-full text-center space-y-6">
+            <div>
+                <h2 class="text-2xl font-bold text-slate-100">Lobi Bekleniyor</h2>
+                <p class="text-slate-400 text-sm mt-1">Diğer oyuncuların katılması bekleniyor...</p>
+            </div>
+
+            <div class="bg-slate-900/60 rounded-xl p-4 border border-slate-700/50">
+                <div class="text-xs text-slate-400 uppercase tracking-wider mb-3 font-semibold">Katılan Oyuncular</div>
+                <div id="waiting-players-list" class="flex flex-wrap gap-2 justify-center">
+                    <!-- Dynamic Player Badges -->
+                </div>
+            </div>
+
+            <div id="host-controls" class="hidden pt-2">
+                <button onclick="startGame()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold py-3.5 px-4 rounded-xl shadow-lg transition duration-200 transform active:scale-95 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-play"></i>
+                    <span>Oyunu Başlat</span>
+                </button>
+            </div>
+            <div id="non-host-msg" class="text-xs text-amber-400/80 italic">
+                Oda kurucusunun oyunu başlatması bekleniyor...
+            </div>
+        </div>
+
+        <!-- GAMEPLAY SCREEN -->
+        <div id="screen-game" class="hidden space-y-6">
+            
+            <!-- Game Status / Turn Indicator -->
+            <div class="bg-slate-800 border border-slate-700/80 rounded-2xl p-4 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center space-x-3">
+                    <div id="turn-indicator-dot" class="w-3.5 h-3.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                    <div>
+                        <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Sıradaki Oyuncu</div>
+                        <div id="current-turn-player" class="text-lg font-bold text-amber-400">---</div>
+                    </div>
+                </div>
+                <div class="bg-slate-900 px-4 py-2 rounded-xl border border-slate-700/50 text-center md:text-right w-full md:w-auto">
+                    <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Son Bahis / İddia</div>
+                    <div id="last-bid-display" class="text-base font-bold text-slate-200">Henüz Bahis Yapılmadı</div>
+                </div>
+            </div>
+
+            <!-- Table Players Area -->
+            <div id="game-players-grid" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <!-- Dynamic Player Game Cards -->
+            </div>
+
+            <!-- My Hand / My Dice Area -->
+            <div class="bg-slate-800 border border-slate-700/80 rounded-2xl p-5 shadow-xl space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Senin Zarların</span>
+                    <span id="my-dice-count-label" class="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full font-mono">5 Zar</span>
+                </div>
+                <div id="my-dice-container" class="flex justify-center items-center gap-3 py-2 min-h-[64px]">
+                    <!-- Dynamic Dice Icons -->
+                </div>
+            </div>
+
+            <!-- Action Controls (Only active when it's player's turn) -->
+            <div id="controls-panel" class="bg-slate-800 border border-slate-700/80 rounded-2xl p-5 shadow-xl space-y-4">
+                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Hamle Yap</div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <!-- Bid Quantity Selector -->
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Miktar (Kaç Adet Zar?)</label>
+                        <select id="select-bid-count" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-bold focus:outline-none focus:border-amber-500">
+                            <!-- JS Populated Options -->
+                        </select>
+                    </div>
+
+                    <!-- Bid Value Selector -->
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Zar Yüzü (Kaçlı Zar?)</label>
+                        <select id="select-bid-value" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-white font-bold focus:outline-none focus:border-amber-500">
+                            <option value="1">1 (Şah / Joker)</option>
+                            <option value="2">2'li</option>
+                            <option value="3">3'lü</option>
+                            <option value="4">4'lü</option>
+                            <option value="5">5'li</option>
+                            <option value="6">6'lı</option>
+                        </select>
+                    </div>
+
+                    <!-- Submit Bid Button -->
+                    <div class="flex items-end">
+                        <button id="btn-make-bid" onclick="makeBid()" class="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-extrabold py-2.5 px-4 rounded-xl transition duration-200">
+                            İddia Et / Bahis Arttır
+                        </button>
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-slate-700/60">
+                    <button id="btn-call-liar" onclick="callLiar()" class="w-full bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold py-3 px-4 rounded-xl shadow-lg transition duration-200 flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-bullhorn"></i>
+                        <span>YALANCI! (Meydan Oku)</span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-4 text-xs text-slate-500 border-t border-slate-800">
+        Yalancı Zarı Online &copy; 2026 - Realtime Multiplayer Game
+    </footer>
+
+    <!-- FIREBASE SDKs (Compat Version for ease of use in static single-file HTML) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+    <script>
+        // --- FIREBASE CONFIGURATION ---
+        // Demo/Test veritabanı - Canlı çalışma için optimize edilmiş Firebase Yapılandırması
+        const firebaseConfig = {
+            databaseURL: "https://liars-dice-multiplayer-default-rtdb.europe-west1.firebasedatabase.app"
+        };
+
+        // Firebase Başlatma
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // --- GAME GLOBAL VARIABLES ---
+        let currentRoomCode = null;
+        let myPlayerId = null;
+        let myPlayerName = "";
+        let isHost = false;
+        let roomRef = null;
+        let roomData = null;
+
+        const DICE_ICONS = {
+            1: 'fa-dice-one',
+            2: 'fa-dice-two',
+            3: 'fa-dice-three',
+            4: 'fa-dice-four',
+            5: 'fa-dice-five',
+            6: 'fa-dice-six'
+        };
+
+        // --- HELPER FUNCTIONS ---
+        function generateRoomCode() {
+            return Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        function generatePlayerId() {
+            return 'player_' + Math.random().toString(36).substring(2, 9);
+        }
+
+        function copyRoomCode() {
+            if(!currentRoomCode) return;
+            navigator.clipboard.writeText(currentRoomCode);
+            alert("Oda kodu kopyalandı: " + currentRoomCode);
+        }
+
+        function showScreen(screenId) {
+            document.getElementById('screen-lobby').classList.add('hidden');
+            document.getElementById('screen-waiting').classList.add('hidden');
+            document.getElementById('screen-game').classList.add('hidden');
+            
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        // --- LOBBY ACTIONS ---
+        function createGame() {
+            const nameInput = document.getElementById('input-player-name').value.trim();
+            if (!nameInput) {
+                alert("Lütfen oyuna başlamak için bir ad girin!");
+                return;
+            }
+
+            myPlayerName = nameInput;
+            myPlayerId = generatePlayerId();
+            currentRoomCode = generateRoomCode();
+            isHost = true;
+
+            roomRef = db.ref('rooms/' + currentRoomCode);
+
+            const initialData = {
+                code: currentRoomCode,
+                status: 'waiting', // waiting, playing, ended
+                hostId: myPlayerId,
+                currentTurnIndex: 0,
+                lastBid: null,
+                players: {
+                    [myPlayerId]: {
+                        id: myPlayerId,
+                        name: myPlayerName,
+                        dice: [],
+                        diceCount: 5,
+                        isAlive: true
+                    }
+                },
+                turnOrder: [myPlayerId]
+            };
+
+            roomRef.set(initialData).then(() => {
+                listenToRoom();
+                showScreen('screen-waiting');
+            }).catch(err => {
+                alert("Oda oluşturulurken hata oluştu: " + err.message);
+            });
+        }
+
+        function joinGame() {
+            const nameInput = document.getElementById('input-player-name').value.trim();
+            const codeInput = document.getElementById('input-room-code').value.trim().toUpperCase();
+
+            if (!nameInput) {
+                alert("Lütfen adınızı giriniz!");
+                return;
+            }
+            if (!codeInput || codeInput.length !== 6) {
+                alert("Lütfen geçerli 6 haneli bir Oda Kodu giriniz!");
+                return;
+            }
+
+            myPlayerName = nameInput;
+            myPlayerId = generatePlayerId();
+            currentRoomCode = codeInput;
+            isHost = false;
+
+            roomRef = db.ref('rooms/' + currentRoomCode);
+
+            roomRef.once('value').then(snapshot => {
+                if (!snapshot.exists()) {
+                    alert("Oda bulunamadı! Lütfen kodu kontrol edin.");
+                    return;
+                }
+
+                const data = snapshot.val();
+                if (data.status !== 'waiting') {
+                    alert("Bu oyun zaten başladı veya bitti!");
+                    return;
+                }
+
+                const updatedPlayers = data.players || {};
+                updatedPlayers[myPlayerId] = {
+                    id: myPlayerId,
+                    name: myPlayerName,
+                    dice: [],
+                    diceCount: 5,
+                    isAlive: true
+                };
+
+                const updatedOrder = data.turnOrder || [];
+                if(!updatedOrder.includes(myPlayerId)) {
+                    updatedOrder.push(myPlayerId);
+                }
+
+                roomRef.update({
+                    players: updatedPlayers,
+                    turnOrder: updatedOrder
+                }).then(() => {
+                    listenToRoom();
+                    showScreen('screen-waiting');
+                });
+            });
+        }
+
+        // --- REALTIME SYNC LISTENER ---
+        function listenToRoom() {
+            document.getElementById('room-info').classList.remove('hidden');
+            document.getElementById('display-room-code').innerText = currentRoomCode;
+
+            roomRef.on('value', snapshot => {
+                roomData = snapshot.val();
+                if (!roomData) return;
+
+                if (roomData.status === 'waiting') {
+                    renderWaitingRoom();
+                } else if (roomData.status === 'playing') {
+                    renderGameRoom();
+                }
+            });
+        }
+
+        // --- WAITING ROOM RENDER ---
+        function renderWaitingRoom() {
+            showScreen('screen-waiting');
+            
+            const playersList = document.getElementById('waiting-players-list');
+            playersList.innerHTML = '';
+
+            const players = roomData.players || {};
+            Object.values(players).forEach(p => {
+                const isMe = p.id === myPlayerId;
+                const isRoomHost = p.id === roomData.hostId;
+                
+                const badge = document.createElement('div');
+                badge.className = `flex items-center space-x-2 px-3 py-1.5 rounded-lg border text-sm ${
+                    isMe ? 'bg-amber-500/20 border-amber-500/50 text-amber-300' : 'bg-slate-800 border-slate-700 text-slate-300'
+                }`;
+                badge.innerHTML = `
+                    <i class="fa-solid fa-user text-xs"></i>
+                    <span class="font-bold">${p.name} ${isMe ? '(Sen)' : ''}</span>
+                    ${isRoomHost ? '<i class="fa-solid fa-crown text-amber-400 text-xs" title="Kurucu"></i>' : ''}
+                `;
+                playersList.appendChild(badge);
+            });
+
+            // Show host start controls
+            if (roomData.hostId === myPlayerId) {
+                document.getElementById('host-controls').classList.remove('hidden');
+                document.getElementById('non-host-msg').classList.add('hidden');
+            } else {
+                document.getElementById('host-controls').classList.add('hidden');
+                document.getElementById('non-host-msg').classList.remove('hidden');
+            }
+        }
+
+        // --- START GAME (HOST) ---
+        function startGame() {
+            const playerIds = roomData.turnOrder;
+            if (playerIds.length < 2) {
+                alert("Oyunu başlatmak için en az 2 oyuncu olmalıdır!");
+                return;
+            }
+
+            // Roll dice for all players
+            const updatedPlayers = { ...roomData.players };
+            playerIds.forEach(id => {
+                const count = updatedPlayers[id].diceCount || 5;
+                updatedPlayers[id].dice = rollDiceForPlayer(count);
+            });
+
+            roomRef.update({
+                status: 'playing',
+                players: updatedPlayers,
+                currentTurnIndex: 0,
+                lastBid: null
+            });
+        }
+
+        function rollDiceForPlayer(count) {
+            let dice = [];
+            for (let i = 0; i < count; i++) {
+                dice.push(Math.floor(Math.random() * 6) + 1);
+            }
+            return dice.sort((a,b) => a - b);
+        }
+
+        // --- GAMEPLAY RENDER ---
+        function renderGameRoom() {
+            showScreen('screen-game');
+
+            const activePlayers = roomData.turnOrder.filter(id => roomData.players[id].isAlive);
+            const currentTurnPlayerId = roomData.turnOrder[roomData.currentTurnIndex];
+            const isMyTurn = currentTurnPlayerId === myPlayerId;
+
+            // Update Current Turn Display
+            const turnPlayer = roomData.players[currentTurnPlayerId];
+            document.getElementById('current-turn-player').innerText = turnPlayer ? turnPlayer.name + (isMyTurn ? ' (Sende!)' : '') : '---';
+
+            // Update Last Bid
+            const lastBidDisplay = document.getElementById('last-bid-display');
+            if (roomData.lastBid) {
+                lastBidDisplay.innerHTML = `<span class="text-amber-400 font-extrabold">${roomData.lastBid.count} Adet</span> x <i class="fa-solid ${DICE_ICONS[roomData.lastBid.value]} text-xl text-amber-400 align-middle"></i> (${roomData.lastBid.playerName})`;
+            } else {
+                lastBidDisplay.innerText = "Henüz Bahis Yapılmadı";
+            }
+
+            // Render Player Cards Grid
+            const playersGrid = document.getElementById('game-players-grid');
+            playersGrid.innerHTML = '';
+
+            roomData.turnOrder.forEach(pId => {
+                const p = roomData.players[pId];
+                const isCurrent = pId === currentTurnPlayerId;
+                const card = document.createElement('div');
+                
+                card.className = `p-3 rounded-xl border transition ${
+                    isCurrent 
+                        ? 'bg-amber-500/10 border-amber-500/80 shadow-lg shadow-amber-500/10' 
+                        : 'bg-slate-800 border-slate-700/70 opacity-90'
+                }`;
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-bold text-sm truncate ${pId === myPlayerId ? 'text-amber-400' : 'text-slate-200'}">${p.name}</span>
+                        ${isCurrent ? '<span class="text-[10px] bg-amber-500 text-slate-950 font-black px-1.5 py-0.5 rounded uppercase">Sıra</span>' : ''}
+                    </div>
+                    <div class="flex items-center space-x-1 text-slate-400 text-xs">
+                        <i class="fa-solid fa-dice text-amber-500"></i>
+                        <span>${p.diceCount} Zar Kaldı</span>
+                    </div>
+                `;
+                playersGrid.appendChild(card);
+            });
+
+            // Render My Hand / Dice
+            const myData = roomData.players[myPlayerId];
+            const myDiceContainer = document.getElementById('my-dice-container');
+            myDiceContainer.innerHTML = '';
+
+            if (myData && myData.dice) {
+                document.getElementById('my-dice-count-label').innerText = `${myData.dice.length} Zar`;
+                myData.dice.forEach(val => {
+                    const diceBox = document.createElement('div');
+                    diceBox.className = 'w-12 h-12 bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-extrabold text-2xl rounded-xl flex items-center justify-center shadow-md border border-amber-300';
+                    diceBox.innerHTML = `<i class="fa-solid ${DICE_ICONS[val]}"></i>`;
+                    myDiceContainer.appendChild(diceBox);
+                });
+            }
+
+            // Update Bid Controls Options
+            updateBidDropdowns();
+
+            // Enable / Disable Controls based on Turn
+            document.getElementById('btn-make-bid').disabled = !isMyTurn;
+            document.getElementById('btn-call-liar').disabled = !isMyTurn || !roomData.lastBid;
+        }
+
+        function updateBidDropdowns() {
+            const countSelect = document.getElementById('select-bid-count');
+            countSelect.innerHTML = '';
+
+            // Calculate total dice on table
+            let totalTableDice = 0;
+            Object.values(roomData.players).forEach(p => {
+                if(p.isAlive) totalTableDice += p.diceCount;
+            });
+
+            const minCount = roomData.lastBid ? roomData.lastBid.count : 1;
+
+            for (let i = minCount; i <= totalTableDice; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.innerText = i + ' Adet';
+                countSelect.appendChild(opt);
+            }
+        }
+
+        // --- BID & CALL LIAR ACTIONS ---
+        function makeBid() {
+            const count = parseInt(document.getElementById('select-bid-count').value);
+            const value = parseInt(document.getElementById('select-bid-value').value);
+
+            if (roomData.lastBid) {
+                if (count < roomData.lastBid.count) {
+                    alert("Daha düşük zar adedi teklif edemezsiniz!");
+                    return;
+                }
+                if (count === roomData.lastBid.count && value <= roomData.lastBid.value) {
+                    alert("Aynı adet için zar yüzü değerini arttırmalısınız!");
+                    return;
+                }
+            }
+
+            const nextTurnIndex = (roomData.currentTurnIndex + 1) % roomData.turnOrder.length;
+
+            roomRef.update({
+                lastBid: {
+                    playerId: myPlayerId,
+                    playerName: myPlayerName,
+                    count: count,
+                    value: value
+                },
+                currentTurnIndex: nextTurnIndex
+            });
+        }
+
+        function callLiar() {
+            if (!roomData.lastBid) return;
+
+            const targetBid = roomData.lastBid;
+            let actualCount = 0;
+
+            // Count target dice across all players
+            Object.values(roomData.players).forEach(p => {
+                if (p.dice) {
+                    p.dice.forEach(d => {
+                        // 1s are wild cards (jokers) unless bid was on 1
+                        if (d === targetBid.value || (d === 1 && targetBid.value !== 1)) {
+                            actualCount++;
+                        }
+                    });
+                }
+            });
+
+            const challengerName = myPlayerName;
+            const bidderName = targetBid.playerName;
+            const bidderId = targetBid.playerId;
+
+            let resultMsg = `Masadaki Toplam Zar (${targetBid.value}'li veya Joker 1'li): ${actualCount} Adet!\n\n`;
+
+            let loserId = null;
+            if (actualCount >= targetBid.count) {
+                // Bidder was right -> Challenger loses a die
+                loserId = myPlayerId;
+                resultMsg += `Meydan okuyan ${challengerName} YANILDI ve 1 zar kaybetti!`;
+            } else {
+                // Bidder lied -> Bidder loses a die
+                loserId = bidderId;
+                resultMsg += `İddia sahibi ${bidderName} BLÖF YAPTI ve 1 zar kaybetti!`;
+            }
+
+            alert(resultMsg);
+
+            // Deduct die and reset round
+            const updatedPlayers = { ...roomData.players };
+            updatedPlayers[loserId].diceCount -= 1;
+
+            if (updatedPlayers[loserId].diceCount <= 0) {
+                updatedPlayers[loserId].isAlive = false;
+                alert(`${updatedPlayers[loserId].name} elendi!`);
+            }
+
+            // Re-roll for next round
+            Object.keys(updatedPlayers).forEach(pId => {
+                if (updatedPlayers[pId].isAlive) {
+                    updatedPlayers[pId].dice = rollDiceForPlayer(updatedPlayers[pId].diceCount);
+                }
+            });
+
+            roomRef.update({
+                players: updatedPlayers,
+                lastBid: null
+            });
+        }
+    </script>
 </body>
 </html>
