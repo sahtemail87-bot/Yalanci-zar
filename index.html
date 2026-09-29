@@ -634,7 +634,7 @@
     /* ===================================================================
        LIAR'S DICE GAME CORE CONTROLLER
        =================================================================== */
-    const FB = { apiKey: "", authDomain: "oyun-8eb3c.firebaseapp.com", databaseURL: "https://oyun-8eb3c-default-rtdb.firebaseio.com", projectId: "oyun-8eb3c" };
+    const FB = { apiKey: "AIzaSyAC1XEtX4pWLN00kvEB4lQtPQ1HM783j2Q", authDomain: "oyun-8eb3c.firebaseapp.com", databaseURL: "https://oyun-8eb3c-default-rtdb.firebaseio.com", projectId: "oyun-8eb3c" };
     let CID = null; try { CID = sessionStorage.getItem('ld-cid'); } catch (e) {}
     if (!CID) { CID = Math.random().toString(36).slice(2, 10); try { sessionStorage.setItem('ld-cid', CID); } catch (e) {} }
     const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
