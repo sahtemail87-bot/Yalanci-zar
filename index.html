@@ -14,6 +14,7 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -633,9 +634,21 @@
     /* ===================================================================
        LIAR'S DICE GAME CORE CONTROLLER
        =================================================================== */
-    const FB = { authDomain: "oyun-8eb3c.firebaseapp.com", databaseURL: "https://oyun-8eb3c-default-rtdb.firebaseio.com", projectId: "oyun-8eb3c" };
+    const FB = { apiKey: "", authDomain: "oyun-8eb3c.firebaseapp.com", databaseURL: "https://oyun-8eb3c-default-rtdb.firebaseio.com", projectId: "oyun-8eb3c" };
     let CID = null; try { CID = sessionStorage.getItem('ld-cid'); } catch (e) {}
     if (!CID) { CID = Math.random().toString(36).slice(2, 10); try { sessionStorage.setItem('ld-cid', CID); } catch (e) {} }
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const safeHTML = h => {
+      const t = document.createElement('template'); t.innerHTML = String(h);
+      const walk = n => [...n.childNodes].forEach(c => {
+        if (c.nodeType === 3) return;
+        if (c.nodeType !== 1) { c.remove(); return; }
+        if (!['B', 'SPAN', 'BR'].includes(c.tagName)) { c.replaceWith(document.createTextNode(c.textContent)); return; }
+        [...c.attributes].forEach(a => { if (!(a.name === 'class' && /^[\w\s\-]*$/.test(a.value))) c.removeAttribute(a.name); });
+        walk(c);
+      });
+      walk(t.content); return t.innerHTML;
+    };
     const genCode = () => { const A = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; let c = ''; for (let i = 0; i < 5; i++) c += A[Math.floor(Math.random() * A.length)]; return c; };
 
     class LiarsDiceGame {
@@ -817,9 +830,9 @@
             <div class="flex items-center justify-between mb-2">
               <div class="flex items-center gap-2">
                 <div class="w-7 h-7 rounded-full bg-slate-800 text-amber-400 text-xs font-bold flex items-center justify-center border border-amber-500/20">
-                  ${p.name.charAt(0)}
+                  ${esc(p.name.charAt(0))}
                 </div>
-                <span class="font-bold text-xs text-slate-200 truncate max-w-[100px]">${p.name}</span>
+                <span class="font-bold text-xs text-slate-200 truncate max-w-[100px]">${esc(p.name)}</span>
               </div>
               <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full ${isOut ? 'bg-rose-900/50 text-rose-300' : 'bg-emerald-900/50 text-emerald-300'}">
                 ${isOut ? 'Elendi' : p.hand.length + ' Zar'}
@@ -1206,11 +1219,16 @@
       }
 
       /* ============ ÇEVRİMİÇİ (Firebase Realtime Database) ============ */
-      fb() {
-        if (this.DB) return this.DB;
-        if (typeof firebase === 'undefined') { alert('Firebase yüklenemedi. İnternet bağlantını kontrol et.'); return null; }
-        try { firebase.initializeApp(FB); this.DB = firebase.database(); return this.DB; }
-        catch (e) { alert('Firebase başlatılamadı: ' + e.message); return null; }
+      async fbReady() {
+        if (typeof firebase === 'undefined') { alert('Firebase yüklenemedi. İnternet bağlantını kontrol et.'); return false; }
+        try {
+          if (!this.DB) { firebase.initializeApp(FB); this.DB = firebase.database(); }
+          if (FB.apiKey && !this.secure) {
+            await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
+            const u = await firebase.auth().signInAnonymously(); CID = u.user.uid; this.secure = true;
+          }
+          return true;
+        } catch (e) { alert('Firebase başlatılamadı: ' + (e.code || e.message) + (FB.apiKey ? ' (Authentication > Anonymous açık mı?)' : '')); return false; }
       }
       R(p) { return this.DB.ref('ld/' + this.code + (p ? '/' + p : '')); }
       cleanName() { return document.getElementById('playerNameInput').value.replace(/[<>&"'`]/g, '').trim().slice(0, 12) || 'Oyuncu'; }
@@ -1260,11 +1278,11 @@
         this.net = null; this.code = ''; this.isGuest = false; this.mySeat = 0; this.S = null; this.lobby = null; this.myHand = []; this.started = false;
       }
 
-      hostRoom(name) {
-        if (!this.fb()) return;
+      async hostRoom(name) {
+        if (!(await this.fbReady())) return;
         this.leaveOnline();
         this.code = genCode(); this.isGuest = false; this.started = false; this.mySeat = 0;
-        this.lobby = [{ cid: CID, name }];
+        this.lobby = [{ cid: CID, name }]; this.spec = [];
         this.logs = []; document.getElementById('gameLogBox').innerHTML = '';
         this.R().remove().then(() => {
           this.net = this.R('actions');
@@ -1274,12 +1292,12 @@
         }).catch(e => alert('Bağlantı hatası: ' + e.message));
       }
 
-      joinRoom() {
+      async joinRoom() {
         this.audio.playClick();
         const code = document.getElementById('roomCodeInput').value.trim().toLocaleUpperCase('en-US').replace(/İ/g, 'I');
         if (!code) { alert('Oda kodunu yaz.'); return; }
         if (!/^[A-Z0-9]{5}$/.test(code)) { alert('Oda kodu 5 karakter olmalı (harf/rakam).'); return; }
-        if (!this.fb()) return;
+        if (!(await this.fbReady())) return;
         const name = this.cleanName();
         this.leaveOnline();
         this.code = code; this.isGuest = true; this.mode = 'online'; this.S = null; this.myHand = []; this.ended = false;
@@ -1292,9 +1310,8 @@
           }
           first = false; this.S = v; this.mySeat = v.ids.indexOf(CID);
           if (this.mySeat < 0) {
-            if (v.ph !== 'lobby') { alert('Oyun çoktan başladı.'); return this.returnToMenu(); }
             if (!joined) { joined = true; this.send({ t: 'join', name }); }
-            return;
+            if (!(v.spec || []).includes(CID)) return;
           }
           this.applyState();
         }, e => { alert('Bağlantı hatası: ' + e.message); this.returnToMenu(); });
@@ -1305,9 +1322,9 @@
         this.showView('onlineLobbyView');
         document.getElementById('lobbyCode').innerText = this.code;
         document.getElementById('lobbyPlayers').innerHTML = names.map((n, i) =>
-          `<div class="flex items-center gap-2 bg-casino-900/80 border border-emerald-900/60 rounded-xl px-4 py-2 text-sm"><span class="text-amber-400 font-bold">${i + 1}.</span> ${n}${i === 0 ? ' 👑' : ''}${i === this.mySeat ? ' <span class="text-emerald-400 text-xs">(sen)</span>' : ''}</div>`).join('');
+          `<div class="flex items-center gap-2 bg-casino-900/80 border border-emerald-900/60 rounded-xl px-4 py-2 text-sm"><span class="text-amber-400 font-bold">${i + 1}.</span> ${esc(n)}${i === 0 ? ' 👑' : ''}${i === this.mySeat ? ' <span class="text-emerald-400 text-xs">(sen)</span>' : ''}</div>`).join('');
         const dur = this.isGuest ? (this.S ? this.S.dur : undefined) : this.turnDuration;
-        document.getElementById('lobbyDuration').innerHTML = (dur === undefined || dur === null) ? '' : `<i class="fa-solid fa-stopwatch text-amber-400 mr-1"></i> Hamle süresi: <b class="text-slate-200">${dur === 0 ? 'Süresiz ∞' : dur + ' sn'}</b>`;
+        document.getElementById('lobbyDuration').innerHTML = (dur === undefined || dur === null) ? '' : `<i class="fa-solid fa-stopwatch text-amber-400 mr-1"></i> Hamle süresi: <b class="text-slate-200">${dur === 0 ? 'Süresiz ∞' : (+dur || 0) + ' sn'}</b>`;
         const btn = document.getElementById('lobbyStartBtn');
         btn.classList.toggle('hidden', this.isGuest); btn.disabled = names.length < 2; btn.classList.toggle('opacity-50', names.length < 2);
         document.getElementById('lobbyMsg').innerText = this.isGuest ? 'Kurucunun oyunu başlatması bekleniyor…' : (names.length < 2 ? 'En az 2 oyuncu gerekli…' : 'Hazırsanız başlatın!');
@@ -1328,6 +1345,8 @@
           const nm = String(m.name || 'Oyuncu').replace(/[<>&"'`]/g, '').slice(0, 12) || 'Oyuncu';
           if (!this.started && this.lobby.length < 6 && !this.lobby.some(p => p.cid === m.from)) {
             this.lobby.push({ cid: m.from, name: nm }); this.drawLobby(this.lobby.map(p => p.name)); this.sync();
+          } else if (this.started && !this.players.some(p => p.cid === m.from) && !(this.spec || []).includes(m.from)) {
+            this.spec = (this.spec || []).concat(m.from); this.sync();
           }
           return;
         }
@@ -1352,13 +1371,13 @@
       sync() {
         if (this.mode !== 'online' || this.isGuest || !this.net) return;
         if (!this.started) {
-          this.R('state').set({ ph: 'lobby', ids: this.lobby.map(p => p.cid), names: this.lobby.map(p => p.name), dur: this.turnDuration });
+          this.R('state').set({ ph: 'lobby', host: CID, ids: this.lobby.map(p => p.cid), names: this.lobby.map(p => p.name), dur: this.turnDuration });
           return;
         }
         const P = this.players;
         P.forEach(p => this.R('dice/' + p.cid).set(p.hand && p.hand.length ? p.hand : null));
         this.R('state').set({
-          ph: 'play', ids: P.map(p => p.cid), names: P.map(p => p.name), cnt: P.map(p => p.hand ? p.hand.length : 0),
+          ph: 'play', host: CID, spec: this.spec || [], ids: P.map(p => p.cid), names: P.map(p => p.name), cnt: P.map(p => p.hand ? p.hand.length : 0),
           turn: this.turnIndex, bid: this.currentBid, round: this.round, tl: this.busy ? null : this.timeLeft,
           logs: this.logs, wild: this.wildOnes, exact: this.exactCallAllowed, over: this.over || null, dur: this.turnDuration
         }).catch(e => { if (!this.errShown) { this.errShown = true; alert('Veritabanına yazılamadı (' + (e.code || e.message) + '). Firebase Rules ayarını kontrol et.'); } });
@@ -1376,7 +1395,7 @@
           panel.innerHTML = '<span class="text-xs text-slate-400">Henüz teklif yok</span>';
           return;
         }
-        const who = (this.players[b.playerIndex] && this.players[b.playerIndex].name) || '';
+        const who = esc((this.players[b.playerIndex] && this.players[b.playerIndex].name) || '');
         head.innerHTML = `<span class="text-amber-300">${b.count} adet</span> <span class="bg-amber-400 text-slate-950 px-2 py-0.5 rounded-md font-bold text-xs">${b.face}'li</span> <span class="text-[10px] text-slate-400 font-normal">(${who})</span>`;
 
         const sig = b.count + '-' + b.face + '-' + b.playerIndex;
@@ -1400,16 +1419,21 @@
         const sig = JSON.stringify([S.turn, S.bid || null, S.round, S.cnt]), fresh = sig !== this.sig;
         if (document.getElementById('gameplayView').classList.contains('hidden')) this.showView('gameplayView');
         this.wildOnes = !!S.wild; this.exactCallAllowed = !!S.exact;
-        this.players = S.names.map((n, i) => ({ id: i, name: n, isHuman: true, active: S.cnt[i] > 0, hand: i === seat ? this.myHand : new Array(S.cnt[i]).fill(0) }));
-        this.turnIndex = S.turn; this.currentBid = S.bid || null; this.round = S.round;
+        this.players = S.names.map((n, i) => ({ id: i, name: n, isHuman: true, active: S.cnt[i] > 0, hand: i === seat ? this.myHand : new Array(Math.max(0, Math.min(5, +S.cnt[i] || 0))).fill(0) }));
+        this.turnIndex = S.turn; this.currentBid = S.bid ? { count: +S.bid.count || 0, face: +S.bid.face || 0, playerIndex: +S.bid.playerIndex || 0 } : null; this.round = S.round;
         const keep = document.getElementById('bidCountInput').value;
         document.getElementById('roundCounterText').innerText = S.round;
         document.getElementById('totalDiceCountText').innerText = S.cnt.reduce((a, b) => a + b, 0);
         this.showBid();
         this.renderTable();
+        if (seat < 0) {
+          document.getElementById('humanPlayerName').innerText = 'Seyirci';
+          document.getElementById('humanDiceCountSub').innerText = 'Oyunu izliyorsun';
+          document.getElementById('humanDiceContainer').innerHTML = '<span class="text-xs text-slate-400 font-bold">👀 Seyirci modundasın.</span>';
+        }
         if (!fresh) document.getElementById('bidCountInput').value = keep;
         const box = document.getElementById('gameLogBox');
-        box.innerHTML = (S.logs || []).map(l => `<div class="text-slate-200 border-b border-emerald-950/40 pb-1">${l}</div>`).join('');
+        box.innerHTML = (S.logs || []).map(l => `<div class="text-slate-200 border-b border-emerald-950/40 pb-1">${safeHTML(l)}</div>`).join('');
         box.scrollTop = box.scrollHeight;
         if (this.tS !== S) { this.tS = S; this.tdl = S.tl == null ? null : Date.now() + S.tl * 1000; }
         if (!this.cd) this.cd = setInterval(() => {
